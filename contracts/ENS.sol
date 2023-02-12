@@ -32,7 +32,7 @@ contract ENS_DOMAIN {
     }
 
     modifier checkIsAvalableToProlong(string memory _domainName) {
-        require(!getIsExpired(_domainName), "Domain possession is expired"); //тоесть если истекло нужно заново купить, продлить не получится
+        require(notExpired(_domainName), "Domain possession is expired"); //тоесть если истекло нужно заново купить, продлить не получится
         _;
     }
 
@@ -57,11 +57,11 @@ contract ENS_DOMAIN {
         _;
     }
 
-    function getIsExpired (
+    function notExpired(
         string memory _domainName
     ) internal view returns (bool) {
         return
-            (domains[_domainName].timeCreate + domains[_domainName].subTime) <
+            (domains[_domainName].timeCreate + domains[_domainName].subTime) >
             uint(block.timestamp);
     }
 
@@ -102,19 +102,21 @@ contract ENS_DOMAIN {
         address _spareAddr = domains[_domainName].sender;
 
         if (_spareAddr != address(0)) {
-            bool isExpired = (domains[_domainName].timeCreate +
-                domains[_domainName].subTime) < uint(block.timestamp);
-            require(!isExpired, "Domain is busy..."); // иначе срок владения предыдущего истек и можно перезаписать
+            require(notExpired(_domainName), "Domain is busy..."); // иначе срок владения предыдущего истек и можно перезаписать
         }
 
-        domains[_domainName] = createDomain(_years, msg.sender, uint(tx.gasprice));
+        domains[_domainName] = createDomain(
+            _years,
+            msg.sender,
+            uint(tx.gasprice)
+        );
     }
 
     function subProlong(
         string memory _domainName,
         uint _prolongYears
     )
-        public  
+        public
         payable
         checkDomainPossessionForProlong(_domainName)
         checkProlongPrice(msg.value, _prolongYears)
