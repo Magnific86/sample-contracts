@@ -11,7 +11,7 @@ contract ENS_DOMAIN {
     struct DomainDetails {
         address sender;
         uint timeCreate;
-        uint gasprice;
+        uint price;
         uint subTime;
     }
 
@@ -32,7 +32,7 @@ contract ENS_DOMAIN {
     }
 
     modifier checkIsAvalableToProlong(string memory _domainName) {
-        require(notExpired(_domainName), "Domain possession is expired"); //тоесть если истекло нужно заново купить, продлить не получится
+        require(notExpired(_domainName), "Domain possession is expired");
         _;
     }
 
@@ -57,11 +57,9 @@ contract ENS_DOMAIN {
         _;
     }
 
-    function notExpired(
-        string memory _domainName
-    ) internal view returns (bool) {
+    function notExpired( string memory _domainName)internal view returns (bool) {
         return
-            (domains[_domainName].timeCreate + domains[_domainName].subTime) >
+            (domains[_domainName].timeCreate + domains[_domainName].subTime) <
             uint(block.timestamp);
     }
 
@@ -84,13 +82,13 @@ contract ENS_DOMAIN {
     function createDomain(
         uint _years,
         address _sender,
-        uint _gasprice
+        uint _price
     ) internal view returns (DomainDetails memory) {
         DomainDetails memory newInfo = DomainDetails({
             sender: _sender,
             timeCreate: block.timestamp,
-            gasprice: uint(tx.gasprice) + uint(_gasprice),
-            subTime: _years * YEAR_IN_SECONDS //перевожу год в секунды
+            price: _price,
+            subTime: _years * YEAR_IN_SECONDS
         });
         return newInfo;
     }
@@ -102,13 +100,13 @@ contract ENS_DOMAIN {
         address _spareAddr = domains[_domainName].sender;
 
         if (_spareAddr != address(0)) {
-            require(notExpired(_domainName), "Domain is busy..."); // иначе срок владения предыдущего истек и можно перезаписать
+            require(notExpired(_domainName), "Domain is busy..."); 
         }
 
         domains[_domainName] = createDomain(
             _years,
             msg.sender,
-            uint(tx.gasprice)
+            uint(msg.value)
         );
     }
 
@@ -122,7 +120,8 @@ contract ENS_DOMAIN {
         checkProlongPrice(msg.value, _prolongYears)
         checkIsAvalableToProlong(_domainName)
     {
-        domains[_domainName].subTime += _prolongYears * YEAR_IN_SECONDS; //здесь тоже перевожу в сек
+        domains[_domainName].price += msg.value;
+        domains[_domainName].subTime += _prolongYears * YEAR_IN_SECONDS;
     }
 
     function scanDomain(
